@@ -1,0 +1,136 @@
+
+#1. sudo apt-get install openssh-server openssh-client
+#2. vi /etc/ssh/ssh_config : 
+#StrictHostKeyChecking no
+3.1 vi /etc/hosts:
+#127.0.1.1      ut-x64
+
+192.168.56.254  nn
+192.168.56.101  dn01
+192.168.56.102  dn02
+192.168.56.103  dn03    
+
+3.2 setup network and hostname (ex: /etc/hostname )
+#3.3 sudo adduser hduser && sudo groupadd hadoop && sudo usermod -g hadoop hduser 
+
+#4. 1 sudo tar xzvf /opt/source/hadoop-2.5.0-cdh5.3.1.tar.gz -C /opt/ ; sudo ln -s /opt/hadoop-2.5.0-cdh5.3.1 /opt/hadoop ; sudo mkdir /opt/hadoop/tmp
+#4. 2 sudo tar xzvf /opt/source/jdk-8u31-linux-x64.tar.gz -C /opt/ ;  sudo ln -s /opt/jdk1.8.0_31 /opt/java && sudo chown -R root:root /opt/jdk1.8.0_31/
+#4.3  &&  sudo chown -R hduser:hadoop /opt/hadoop-2.5.0-cdh5.3.1
+
+5. sudo vi /etc/profile
+# Add for Hadoop , generate by CLZ2BD
+export JAVA_HOME=/opt/java
+export HADOOP_HOME=/opt/hadoop
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+
+export YARN_HOME=$HADOOP_HOME
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+
+export PATH=$PATH:${JAVA_HOME}/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+6.1 sudo cat >> /opt/hadoop/libexec/hadoop-config.sh << EOF
+export JAVA_HOME=/opt/java
+EOF
+6.2 cat >> /opt/hadoop/etc/hadoop/hadoop-env.sh << EOF
+#Add for JDK
+export JAVA_HOME=/opt/java
+EOF
+6.3 cat > /opt/hadoop/hadoop-current/etc/hadoop/slaves << EOF
+dn01
+dn02
+dn03
+EOF
+
+6.4 cat > /opt/hadoop/hadoop-current/etc/hadoop/core-site.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>fs.default.name</name>
+    <value>hdfs://nn:9000</value>
+  </property>  
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value>/opt/hadoop/tmp</value>
+  </property>
+</configuration>
+EOF
+
+6.5 cat > /opt/hadoop/hadoop-current/etc/hadoop/hdfs-site.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>2</value>
+  </property>  
+  <property>
+    <name>dfs.permissions</name>
+    <value>false</value>
+  </property>
+</configuration>
+EOF
+
+6.6 #增加環境變數
+cat > /opt/hadoop/hadoop-current/etc/hadoop/mapred-site.xml << EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+</configuration>
+EOF
+
+6.7 編輯 /opt/hadoop/hadoop-current/etc/hadoop/yarn-site.xml 如下：
+cat > /opt/hadoop/hadoop-current/etc/hadoop/yarn-site.xml << EOF
+<?xml version="1.0"?>
+<configuration>
+<property>
+<name>yarn.resourcemanager.scheduler.address</name>
+<value>nn:8030</value>
+</property>
+<property>
+<name>yarn.resourcemanager.resource-tracker.address</name>
+<value>nn:8031</value>
+</property>
+<property>
+<name>yarn.resourcemanager.address</name>
+<value>nn:8032</value>
+</property>
+<property>
+<name>yarn.nodemanager.address</name>
+<value>0.0.0.0:8034</value>
+</property>
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>		# use '_' for cdh5.3.1
+</property>
+<property>
+<name>yarn.nodemanager.local-dirs</name>
+<value>/home/hduser/hadoop_dir/nm-local-dir</value>
+</property>
+<property>
+<name>yarn.nodemanager.log-dirs</name>
+<value>/home/hduser/hadoop_dir/userlogs</value>
+</property>
+</configuration>
+EOF
+
+7.0 Check post -install 
+$ java -version
+$  hadooop version
+
+7.1 Format namenode -format
+hduser@nn:~$ hadoop namenode -format
+hduser@nn:~$ start-dfs.sh
+http://master:50070/
+hduser@nn:~$ start-yarn.sh
+http://master:8088/
+
+8. run pisample :
+hduser@nn:~$ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000

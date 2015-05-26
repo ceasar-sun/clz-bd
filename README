@@ -1,0 +1,27 @@
+####################################################
+# Clonezilla-BD : Deploy CDH Haddop automativally via CLonezilla 
+#
+# Description: To deploy CDH Haddop cluster automatically
+# Author:
+#	Ceasar Sun <ceasar_at_nchc_org_tw>
+#
+#	Free Software Lab, NCHC, Taiwan
+#	License: GPL
+####################################################
+
+How to use :
+
+* Prepare : 
+Check and prepare necessaru config files and CDH package, network connection is required. At last step, it would install itself as a postrun module in Clonezilla SE environment if available (root privilege required )
+
+$ deploy-bd.sh --parpare
+
+* Set postrun and deploy
+1. Run dcs command to setup ocs restore procedure , select Postrun parameter "-o1" in advanced mode
+2. Make clients machine to run ocs restore procedure , then CDH environment would be deploy during ocs-postrun stage
+
+* Test Hadoop environmrnt
+1 .Wait for all clients machine reboot and runnig native OS and some necessary services would be startup  in master node.
+2. Master would take time to wait all slave nodes on line (stay in rc.local service) for starting relative services
+3. Login to master node and run Hadoop test code via 'hduser' account :
+$ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000

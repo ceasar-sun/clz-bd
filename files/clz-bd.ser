@@ -1,0 +1,104 @@
+#!/bin/bash 
+
+####################################################
+# Clonezilla-BD : Deploy CDH Haddop automativally via CLonezilla 
+#
+# Description: Start relative service for Clz-BD Hadoop 
+# Author:
+#	Ceasar Sun <ceasar_at_nchc_org_tw>
+#
+#	Free Software Lab, NCHC, Taiwan
+#	License: GPL
+####################################################
+export PATH=$PATH:/usr/sbin:/bin:/sbin:/sbin
+
+# Load Clz2BD setting and functions
+_CLZ2BD_ROOT_DIR=$(cd $(dirname $0) ;pwd)
+
+[ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd.conf" ] && [ -z "$_LOAD_CLZ2BD_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd.conf
+[ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf" ] && [ -z "$_LOAD_CLZ2BD_CUSTOM_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf
+
+#declare -i _RETRY_TIMEOUT=10
+#declare -i _RETRY_SLEEP_SEC=2
+
+#############
+###  Main  ###
+#############
+check_required_pkg(){
+
+	su - $_HD_USER -c "java -version" 2>/dev/null
+	[ "$?" -ne "0" ] && echo "Java is failed !" && exit 1;
+	su - $_HD_USER -c "hadoop version" 2>/dev/null
+	[ "$?" -ne "0" ] && echo "Haadop is failed !" && exit 1;
+
+}
+
+wait_for_all_slave(){
+
+	[ ! -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves" -o "$(cat $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves | wc -l )" -eq 0 ] && echo "No slave list and failed !" && exit 1; 
+
+	for slave in `cat $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves`; do
+		declare -i retry_count=0
+		declare -i onlne_slave=0
+
+		if_online="n"
+		host_resp=""
+		echo -n "Check '$slave' online :..."
+		until [ "$if_online" = "y" -o "$retry_count" -ge "$_SERVICE_RETRY_TIMEOUT" ] ; do 
+			host_resp="$(su - $_HD_USER -c "ssh $slave /bin/hostname" 2>/dev/null)"
+			if [ "$host_resp" = "$slave" ] ; then
+				if_online=y
+				onlne_slave=onlne_slave+1
+				echo "yes"
+			else
+				retry_count=retry_count+1
+				echo "no -> retry [$retry_count/$_SERVICE_RETRY_TIMEOUT] per $_SERVICE_RETRY_SLEEP_SEC seconds..."
+				sleep $_SERVICE_RETRY_SLEEP_SEC
+			fi
+		done
+		[ "$if_online" = "n" ] && echo "Some slave nodes not online. Stop service !" && exit 1;
+	done
+
+}
+
+# check privilege
+check_required_pkg; 
+
+# Parse command-line options
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-b|--batch) shift ; _BATCH_MODE="y" ;;
+		-d|--debug) shift ; _DEBUG=y ;;
+		--start)	shift ; _ACTION="start" ;;
+		--stop)	shift ; _ACTION="stop" ;;
+		--format)	shift ; _ACTION="format" ;;
+		-v|--verbose) shift ; _VERBOSE="-v" ;;
+		-V|--version) shift ; do_print_version=y  ;;
+
+		--help)	shift ; do_print_help=y ;;
+
+		--)		shift ; break ;;
+		-*)		echo "${0}: ${1}: invalid option" ; do_print_help=y; 	shift ;;
+		*)	service_name=$1 ;shift ;;
+	esac
+done
+
+[ -z "$service_name" ] && service_name="namenode"
+
+if [ "$_ACTION" = "format" -a "$service_name" = "namenode" ] ; then 
+	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || su - $_HD_USER -c "hadoop namenode -format"
+elif [ "$_ACTION" = "start" ]; then
+	wait_for_all_slave;
+	echo "Start $service_name : su - $_HD_USER -c \"start-${service_name}.sh\""
+	su - $_HD_USER -c "start-${service_name}.sh"
+
+elif [ "$_ACTION" = "stop" ]; then
+	echo "Stop $service_name : su - $_HD_USER -c \"stop-${service_name}.sh\""
+	su - $_HD_USER -c "stop-${service_name}.sh"
+else
+	$SETCOLOR_WARNING ;echo "Usage: $0 [--format|dfs (--start|--stop)|yarn --start|--stop] "; $SETCOLOR_NORMAL 
+fi
+
+
+exit 0
+
