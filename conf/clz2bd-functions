@@ -212,7 +212,7 @@ search_target_dev(){
 
 	echo "Search possible target device :"
 	[ -d "$_HD_DEPLOY_MOUNT_POINT" ] || mkdir $_HD_DEPLOY_MOUNT_POINT
-	dev_list="$(awk -F ":" ' $1 ~ /^\/dev\/(sd[a-z]+[[:digit:]]+|cciss|mapper)/ {print $1})"
+	dev_list="$(blkid | awk -F ":" ' $1 ~ /^\/dev\/(sd[a-z]+[[:digit:]]+|cciss|mapper)/ {print $1}' )"
 	for dev in $dev_list ; do
 		echo -n "check $dev ..."
 		dev_fs=$(LC_ALL=C ocs-get-part-info "$dev"  filesystem 2>/dev/null)
