@@ -61,7 +61,7 @@ do_prepare_network(){
 	[ -z "$_HD_NW_DNS" ] && $_HD_NW_DNS=$_HD_NW_DNS_DEF
 
 	[ -f "/etc/dhcp/dhcpd.conf" ] && ( grep "hardware ethernet " /etc/dhcp/dhcpd.conf | awk -F " " '{print $3}'| sed -s 's|;||g' > $_HD_MACLIST )
-	[ -f "$_HD_MACLIST"] && mac_amount="$(cat $_HD_MACLIST | wc -l )" || mac_amount=0
+	[ -f "$_HD_MACLIST" ] && mac_amount="$(cat $_HD_MACLIST | wc -l )" || mac_amount=0
 	if [ $mac_amount -gt 0 ] ; then
 		read -p "Find available mac list from dhcpd service, use it:[Y/n]" _answer
 		[ -n "$(echo $_answer | grep -iE 'n|N')" ] && mac_amount=0
