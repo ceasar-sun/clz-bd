@@ -61,7 +61,7 @@ do_prepare_network(){
 	[ -z "$_HD_NW_DNS" ] && $_HD_NW_DNS=$_HD_NW_DNS_DEF
 
 	[ -f "/etc/dhcp/dhcpd.conf" ] && ( grep "hardware ethernet " /etc/dhcp/dhcpd.conf | awk -F " " '{print $3}'| sed -s 's|;||g' > $_HD_MACLIST )
-	mac_amount="$(cat $_HD_MACLIST | wc -l )"
+	[ -f "$_HD_MACLIST"] && mac_amount="$(cat $_HD_MACLIST | wc -l )" || mac_amount=0
 	if [ $mac_amount -gt 0 ] ; then
 		read -p "Find available mac list from dhcpd service, use it:[Y/n]" _answer
 		[ -n "$(echo $_answer | grep -iE 'n|N')" ] && mac_amount=0
@@ -76,10 +76,7 @@ do_prepare_network(){
 
 		[ -f "$_answer" ] || ( echo "File:'$_answer' not exist ?";  continue;)
 		mac_amount="$(grep -E "^$MAC_reg" $_answer | wc -l )"
-		#mac_ip_pair_amount="$(grep -E "^$MAC_reg[[:space:]]{1,}$IP_reg" $_answer | wc -l )"
-		# make sure the pairs is correct
-		#[ $mac_amount -eq $mac_ip_pair_amount ] && ( cp $_answer $_CLZ2BD_ROOT_DIR/conf/mac-ip.lst ) || ( mac_amount=0; echo "File :'$_answer' contents error ?";  continue;)
-		[ $mac_amount -ge 3 ] && cp $_answer $_HD_MACLIST
+		[ $mac_amount -gt 0 ] && cp $_answer $_HD_MACLIST
 	done
 
 	max_ip_capability="$(ipcalc $_HD_NW_NETWORK/$_HD_NW_NETMASK | grep "^Hosts/Net"| awk -F " " '{print $2}')"
