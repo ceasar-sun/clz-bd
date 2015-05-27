@@ -1,4 +1,13 @@
+Date: 2015/05/27
+# mount LVM
+https://quonn.wordpress.com/2010/12/01/how-to-mount-lvm-partition-on-ubuntu/
+pvscan
+vgscan
+vgchange -a y
+lvscan
+mount /dev/VolGroup00/LogVol00 /mnt
 
+Date: Project init 
 #1. sudo apt-get install openssh-server openssh-client
 #2. vi /etc/ssh/ssh_config : 
 #StrictHostKeyChecking no

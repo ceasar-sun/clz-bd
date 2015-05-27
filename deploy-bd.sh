@@ -53,6 +53,9 @@ if [ "$_ACTION" = "postrun" ] ; then
 	search_target_dev;
 
 	[ -z "$_HD_DEPLOY_DEV" ] && echo "No possible guest OS to deploy" && exit 1;
+
+	# Start LVM module
+	ocs-lvm2-start
 	mount $_HD_DEPLOY_DEV $_HD_DEPLOY_MOUNT_POINT
 	mount -o bind /dev ${_HD_DEPLOY_MOUNT_POINT}/dev
 	mount -o bind /dev/pts ${_HD_DEPLOY_MOUNT_POINT}/dev/pts
@@ -84,6 +87,9 @@ if [ "$_ACTION" = "postrun" ] ; then
 	umount -l ${_HD_DEPLOY_MOUNT_POINT}/dev/pts
 	umount -l ${_HD_DEPLOY_MOUNT_POINT}/dev
 	umount -f -l $_HD_DEPLOY_MOUNT_POINT
+
+	# Stop LVM
+	ocs-lvm2-stop
 
 	$SETCOLOR_SUCCESS; echo "Done . Gool luck !"; $SETCOLOR_NORMAL;
  
