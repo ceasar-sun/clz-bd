@@ -470,7 +470,7 @@ setup_hd_service(){
 
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
 		$SETCOLOR_WARNING ; echo "Setup CLZ-BD service files on $_HD_NAME_MASTER:" ; $SETCOLOR_NORMAL;
-		ln -s ./files/clz-bd.ser ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser
+		ln -sf ./files/clz-bd.ser ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser
 		chown -R ${_HD_USER}.${_HD_GROUP} ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}
 
 		if [ ! -f "/etc/rc.local" ] ; then 

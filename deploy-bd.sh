@@ -119,7 +119,7 @@ elif [ "$_ACTION" = "prepare" ] ; then
 		$SETCOLOR_NORMAL;
 		if [ ! -n "$(echo $_answer | grep -iE "^(n|N)$")" ] ; then
 			[  ! -d "/usr/share/drbl/postrun/ocs/$_CLZ2BD_PNAME" ] && mkdir /usr/share/drbl/postrun/ocs/${_CLZ2BD_PNAME}
-			sudo rsync -aP ${_CLZ2BD_ROOT_DIR}/ /usr/share/drbl/postrun/ocs/${_CLZ2BD_PNAME}/
+			sudo rsync -aP --exclude=.git* ${_CLZ2BD_ROOT_DIR}/ /usr/share/drbl/postrun/ocs/${_CLZ2BD_PNAME}/
 
 		fi
 	fi
