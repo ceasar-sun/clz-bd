@@ -74,7 +74,7 @@ do_prepare_network(){
 		read -p "Input mac-ip pairs (sample:$_CLZ2BD_ROOT_DIR/conf/mac-list.sample.txt) list file [$_CLZ2BD_ROOT_DIR/mac-list.txt] or [Ctrl+C] to exit: " _answer
 		$SETCOLOR_NORMAL
 
-		[ -f "$_answer" ] || ( echo "File:'$_answer' not exist ?";  continue;)
+		[ ! -f "$_answer" ] && echo "File:'$_answer' not exist ?" && continue;
 		mac_amount="$(grep -E "^$MAC_reg" $_answer | wc -l )"
 		[ $mac_amount -gt 0 ] && cp $_answer $_HD_MACLIST
 	done
