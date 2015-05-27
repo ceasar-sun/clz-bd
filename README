@@ -19,7 +19,7 @@ Require:
 * Saved Linux image (via Clonezilla)
 
 Support:
-* Linux OS version: Debian, Ubuntut, LinuxMint
+* Linux OS version: Debian, Ubuntut, LinuxMint , with LVM2
 * Hadoop version : CDH (Cloudera's Distribution Hadoop)
 
 How to use :
