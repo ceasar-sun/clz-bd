@@ -29,6 +29,7 @@ while [ $# -gt 0 ]; do
 		-b|--batch) shift ; _BATCH_MODE="y" ;;
 		-d|--debug) shift ; _DEBUG=y ;;
 		--deploy)	shift ; _ACTION="deploy" ;;
+		--posttune)	shift ; _ACTION="post-tune" ;;
 		--prepare)	shift ; _ACTION="prepare" ;;
 		--postrun)	shift ; _ACTION="postrun" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
@@ -137,8 +138,11 @@ EOF
 	echo "You can modify /usr/share/drbl/postrun/ocs/$_CLZ2BD_PNAME/*.conf with your needs."
 	$SETCOLOR_NORMAL;
 
+elif [ "$_ACTION" = "post-tune" ] ; then
+	tune_network;
+
 else
-	$SETCOLOR_WARNING ;echo "Usage: $0 [--prepare|--postrun|--deploy]"; $SETCOLOR_NORMAL 
+	$SETCOLOR_WARNING ;echo "Usage: $0 [--prepare|--postrun|--deploy|-env-adjust]"; $SETCOLOR_NORMAL 
 fi
 
 
