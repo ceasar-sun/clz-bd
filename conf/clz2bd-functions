@@ -555,29 +555,61 @@ EOF
 
 setup_hd_service(){
 
+	$SETCOLOR_WARNING ; echo "Setup CLZ-BD service files on $_HD_NAME_MASTER:" ; $SETCOLOR_NORMAL;
+	#ln -sf ./files/clz-bd.ser ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser
+	chown -R ${_HD_USER}.${_HD_GROUP} ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}
+
+	if [ ! -f "/etc/rc.local" ] ; then 
+		$SETCOLOR_FAILURE ; echo "No /etc/rc.local ?" ; $SETCOLOR_NORMAL ;
+		exit 1;
+	fi
+	cp /etc/rc.local /etc/rc.local.clz-bd.bak
+	sed -i -e "s/^exit/#exit/g" /etc/rc.local
+
+	# insert port-tune 
+	echo "${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser --post-tune" >> /etc/rc.local
+
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
-		$SETCOLOR_WARNING ; echo "Setup CLZ-BD service files on $_HD_NAME_MASTER:" ; $SETCOLOR_NORMAL;
-		ln -sf ./files/clz-bd.ser ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser
-		chown -R ${_HD_USER}.${_HD_GROUP} ${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}
-
-		if [ ! -f "/etc/rc.local" ] ; then 
-			$SETCOLOR_FAILURE ; echo "No /etc/rc.local ?" ; $SETCOLOR_NORMAL ;
-			exit 1;
-		fi
-		cp /etc/rc.local /etc/rc.local.clz-bd.bak
-		sed -i -e "s/^exit/#exit/g" /etc/rc.local
-
 		cat  >> /etc/rc.local << EOF
 
 # Generate by deploy-bd.sh --deploy
 # To format (only once) , start dfs and yarn
-${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser --format
-${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser dfs --start
-${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/clz-bd.ser yarn --start
+${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser --format
+#${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser dfs --start
+#${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser yarn --start
 
-exit 0
 EOF
-	fi
+	fi	
+	ehco "exit 0" >> /etc/rc.local
+	
 }
+uninstall_clz-bd(){
+	# kill relative processs first
+	for pid in `ps  -u $_HD_USER | grep -E '^[[:digit:]]+' | awk '{print $1}'` ; do
+		kill -9 $pid
+	done
+
+	userdel -r $_HD_USER
+	groupdel $HD_GROUP
+
+	echo "Remove PKG:"
+	if [ -n "$(echo $_PKG_JAVA | grep 'openjdk' 2>/dev/null)" ] ; then 
+		if [ "$OS_Type" = 'DEB' ] ; then
+			apt-get purge -y $_PKG_JAVA
+		elif [ "$OS_Type" = 'RH' ]; then
+			yum remove -y $_PKG_JAVA
+		fi
+	fi
+
+	echo "Remove folder in /opt: "
+	[ -d "$_PKG_INST_JAVA_DIR"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_JAVA_DIR
+	[ -d "$_PKG_INST_HADOOP_DIR"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_HADOOP_DIR
+	[ -d "$_PKG_INST_HADOOP_TMP"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_TMP ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_HADOOP_TMP
+
+	echo "Backup to ${_CLZ2BD_PNAME} -> $_CLZ2BD_PNAME}.bak"
+	mv $_CLZ2BD_DEFAULT_ROOT ${_CLZ2BD_PNAME}.bak
+
+}
+
 
 
