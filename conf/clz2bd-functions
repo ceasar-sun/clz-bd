@@ -35,13 +35,18 @@ check_os_if_support(){
 
 	# check OS if be supported : Ubuntut|Debian|LinuxMint
 	echo "Check Linux distribution and version:"
-	#which lsb_release 1>/dev/null 2>&1 || ( echo "No lsb_release command ! Exit now. " ; exit 1; )
 	OS_Distr_ID="$(grep -E "^ID=" /etc/os-release| awk -F"=" '{print $2}')"
+	if [ -n "$( grep -E "^ID=[debian|ubuntu]" /etc/os-release 2>/dev/null )" ]; then 
+		OS_Type='DEB'
+	elif [  -n "$( grep -E "^ID=[centos]" /etc/os-release 2>/dev/null )"  ]; then
+		OS_Type='RH'
+	fi
 	OS_Release="$(grep -E "^PRETTY_NAME=" /etc/os-release| awk -F"=" '{print $2}')"
 	_CLZ2BD_ARCH="$(uname -m)"
 	[ -z "$(echo $OS_Distr_ID | grep -iE "$_CLZ2BD_SUPPORT_DISTRO")" ] && ($SETCOLOR_FAILURE; echo "Please prepare all necessary components first !!! "; $SETCOLOR_NORMAL ) && exit 1
 	echo -n "Distribution:" ; $SETCOLOR_SUCCESS ; echo "$OS_Distr_ID" ; $SETCOLOR_NORMAL
 	echo -n "Release:" ; $SETCOLOR_SUCCESS ; echo "$OS_Release" ; $SETCOLOR_NORMAL
+	echo -n "Type:" ; $SETCOLOR_SUCCESS ; echo "$OS_Type" ; $SETCOLOR_NORMAL
 }
 
 
@@ -312,7 +317,7 @@ config_system_env(){
 	_this_mac="$(ifconfig -a | grep HWaddr | head -n 1 | awk -F " " '{print $5}')"
 	_this_if="$(ifconfig -a | grep HWaddr | head -n 1 | awk -F " " '{print $1}')"
 
-	for _this_if in `ls /sys/class/net/` do ; 
+	for _this_if in `ls /sys/class/net/` ; do 
 		[ "$i" == "lo" ] && continue; 
 		_this_mac="$(cat /sys/class/net/${_this_if}/address)"
 		_this_ip="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $2 }' )"
@@ -379,8 +384,74 @@ EOF
 
 }
 
-tune_network(){
-	echo "Adjust network ..."
+tune_nic_id(){
+	echo "Adjust network device ID ...";
+
+	local _this_mac
+	local _this_if
+	local _expected_ip
+	local _current_ip
+
+	local _if_belone_cluster
+
+	for _this_if in `ls /sys/class/net/` ; do 
+		[ "$i" == "lo" ] && continue; 
+		_this_mac="$(cat /sys/class/net/${_this_if}/address)"
+		_expected_ip="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $2 }' | sed -e 's/\.0*/\./g')"
+		_current_ip="$(ip addr show $_this_if  | grep -E '^[[:space:]]+inet[[:space:]]' | awk '{print $2}' | awk -F "/" '{print $1}')"
+
+		if [ -z "$_expected_ip" ] ; then
+			# not configuration for this mac
+			continue
+		elif [ "$_expected_ip" = "$_current_ip" ] ; then 
+			# this NIC is correct			
+			continue
+		else
+			if [ "$OS_Type" = 'DEB' ] ; then
+				_orig_nic_id="$(tac /etc/network/interfaces | grep -A 3 "$_expected_ip[[:space:]]*$"  | grep 'iface' | head -n 1 | awk '{print $2}')"
+			elif [ "$OS_Type" = 'RH' ] ; then
+				echo "RH type: skip ..."
+			fi
+
+			ifdown $_this_if 
+			ifconfig $_this_if down
+
+			ifdown $_orig_nic_id
+			ifconfig $_orig_nic_id down
+
+			if [ -z "$_orig_nic_id"  ] ; then 
+				if [ "$OS_Type" = 'DEB' ] ; then
+					cat >> /etc/network/interfaces << EOF
+# Generate by tune_nic_id
+auto $_this_if
+iface $_this_if inet static
+        address $_expected_ip
+        netmask ${_HD_NW_NETMASK}
+        network ${_HD_NW_NETWORK}
+        broadcast ${_HD_NW_BROADCAST_IP}
+        gateway ${_HD_NW_GATEWAY}
+        dns-nameservers $_HD_NW_DNS
+EOF
+				elif [ "$OS_Type" = 'RH' ]; then
+					echo "RH type: skip ..."
+				fi
+
+			else
+				# replace device ID
+				if [ "$OS_Type" = 'DEB' ] ; then
+					cp /etc/network/interfaces /etc/network/interfaces.clz-tune.bak
+					sed -i -e "s/$_orig_nic_id/$_this_if/g" /etc/network/interfaces
+				elif [ "$OS_Type" = 'RH' ]; then
+					echo "RH type: skip ..."
+				fi
+			fi
+
+			ifup $_this_if
+			ifconfig $_this_if up
+			ifup $_orig_nic_id
+			ifconfig $_orig_nic_id up
+		fi
+	done
 }
 
 config_hadoop_env(){

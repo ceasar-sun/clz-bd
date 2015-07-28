@@ -13,7 +13,9 @@
 export PATH=$PATH:/usr/sbin:/bin:/sbin:/sbin
 
 # Load Clz2BD setting and functions
-_CLZ2BD_ROOT_DIR=$(cd $(dirname $0) ;pwd)
+_CLZ2BD_WS_DIR=$(cd $(dirname $0) ;pwd)
+
+ [ -d "/opt/clz-bd" ] && _CLZ2BD_DEFAULT_ROOT="$_CLZ2BD_DEFAULT_ROOT" || _CLZ2BD_ROOT_DIR="$_CLZ2BD_WS_DIR"
 
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd.conf" ] && [ -z "$_LOAD_CLZ2BD_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd.conf
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf" ] && [ -z "$_LOAD_CLZ2BD_CUSTOM_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf
@@ -29,7 +31,7 @@ while [ $# -gt 0 ]; do
 		-b|--batch) shift ; _BATCH_MODE="y" ;;
 		-d|--debug) shift ; _DEBUG=y ;;
 		--deploy)	shift ; _ACTION="deploy" ;;
-		--posttune)	shift ; _ACTION="post-tune" ;;
+		--post-tune)	shift ; _ACTION="post-tune" ;;
 		--prepare)	shift ; _ACTION="prepare" ;;
 		--postrun)	shift ; _ACTION="postrun" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
@@ -138,8 +140,8 @@ EOF
 	echo "You can modify /usr/share/drbl/postrun/ocs/$_CLZ2BD_PNAME/*.conf with your needs."
 	$SETCOLOR_NORMAL;
 
-elif [ "$_ACTION" = "post-tune" ] ; then
-	tune_network;
+#elif [ "$_ACTION" = "post-tune" ] ; then
+#	tune_network;
 
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--prepare|--postrun|--deploy|-env-adjust]"; $SETCOLOR_NORMAL 

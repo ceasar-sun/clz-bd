@@ -9,6 +9,14 @@
 #
 #	Free Software Lab, NCHC, Taiwan
 #	License: GPL
+#
+#	Usage:
+# To format (only once) , start dfs and yarn
+# /opt/clz-bd/clz-bd.ser --post-tune
+# /opt/clz-bd/clz-bd.ser --format
+# /opt/clz-bd/clz-bd.ser dfs --start
+# /opt/clz-bd/clz-bd.ser yarn --start
+#
 ####################################################
 export PATH=$PATH:/usr/sbin:/bin:/sbin:/sbin
 
@@ -62,7 +70,8 @@ wait_for_all_slave(){
 }
 
 # check privilege
-check_required_pkg; 
+check_required_pkg;
+check_os_if_support;
 
 # Parse command-line options
 while [ $# -gt 0 ]; do
@@ -72,6 +81,7 @@ while [ $# -gt 0 ]; do
 		--start)	shift ; _ACTION="start" ;;
 		--stop)	shift ; _ACTION="stop" ;;
 		--format)	shift ; _ACTION="format" ;;
+		--post-tune)	shift ; _ACTION="post-tune" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
 		-V|--version) shift ; do_print_version=y  ;;
 
@@ -85,16 +95,25 @@ done
 
 [ -z "$service_name" ] && service_name="namenode"
 
+# format HDFS
 if [ "$_ACTION" = "format" -a "$service_name" = "namenode" ] ; then 
 	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || su - $_HD_USER -c "hadoop namenode -format"
+
+# start service:
 elif [ "$_ACTION" = "start" ]; then
 	wait_for_all_slave;
 	echo "Start $service_name : su - $_HD_USER -c \"start-${service_name}.sh\""
 	su - $_HD_USER -c "start-${service_name}.sh"
 
+# stop service:
 elif [ "$_ACTION" = "stop" ]; then
 	echo "Stop $service_name : su - $_HD_USER -c \"stop-${service_name}.sh\""
 	su - $_HD_USER -c "stop-${service_name}.sh"
+
+# post-tune 
+elif [ "$_ACTION" = "post-tune" ]; then
+	tune_nic_id;
+
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--format|dfs (--start|--stop)|yarn --start|--stop] "; $SETCOLOR_NORMAL 
 fi
