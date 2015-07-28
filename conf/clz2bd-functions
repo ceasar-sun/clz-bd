@@ -596,18 +596,19 @@ uninstall_clz-bd(){
 	if [ -n "$(echo $_PKG_JAVA | grep 'openjdk' 2>/dev/null)" ] ; then 
 		if [ "$OS_Type" = 'DEB' ] ; then
 			apt-get purge -y $_PKG_JAVA
+			apt-get autoremove
 		elif [ "$OS_Type" = 'RH' ]; then
 			yum remove -y $_PKG_JAVA
 		fi
 	fi
 
-	echo "Remove folder in /opt: "
-	[ -d "$_PKG_INST_JAVA_DIR"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_JAVA_DIR
-	[ -d "$_PKG_INST_HADOOP_DIR"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_HADOOP_DIR
-	[ -d "$_PKG_INST_HADOOP_TMP"] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_TMP ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_HADOOP_TMP
+	echo "Remove folder $_PKG_INST_ROO : "
+	[ -d "$_PKG_INST_ROO/$_PKG_INST_JAVA_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_JAVA_DIR
+	[ -d "$_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR
+	[ -d "$_PKG_INST_ROO/$_PKG_INST_HADOOP_TMP" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_TMP ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_HADOOP_TMP
 
 	echo "Backup to ${_CLZ2BD_PNAME} -> $_CLZ2BD_PNAME}.bak"
-	mv $_CLZ2BD_DEFAULT_ROOT ${_CLZ2BD_PNAME}.bak
+	mv $_CLZ2BD_DEFAULT_ROOT ${_CLZ2BD_DEFAULT_ROOT}.bak
 
 }
 

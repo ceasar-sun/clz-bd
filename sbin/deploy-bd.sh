@@ -11,11 +11,12 @@
 #	License: GPL
 ####################################################
 export PATH=$PATH:/usr/sbin:/bin:/sbin:/sbin
+_CLZ2BD_DEFAULT_ROOT="/opt/clz-bd"
 
 # Load Clz2BD setting and functions
 _CLZ2BD_WS_DIR=$(cd $(dirname $0) ;pwd)
 
- [ -d "/opt/clz-bd" ] && _CLZ2BD_DEFAULT_ROOT="$_CLZ2BD_DEFAULT_ROOT" || _CLZ2BD_ROOT_DIR="$_CLZ2BD_WS_DIR"
+ [ -d "/opt/clz-bd" ] && _CLZ2BD_ROOT_DIR="$_CLZ2BD_DEFAULT_ROOT" || _CLZ2BD_ROOT_DIR="$_CLZ2BD_WS_DIR"
 
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd.conf" ] && [ -z "$_LOAD_CLZ2BD_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd.conf
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf" ] && [ -z "$_LOAD_CLZ2BD_CUSTOM_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf
@@ -35,7 +36,7 @@ while [ $# -gt 0 ]; do
 		--ocs-deploy)	shift ; _ACTION="ocs-deploy" ;;
 		--post-tune)	shift ; _ACTION="post-tune" ;;
 		--node-prepare)	shift ; _ACTION="node-prepare" ;;
-		--node-purge)	shift ; _ACTION="node-uninstall" ;;
+		--node-uninstall)	shift ; _ACTION="node-uninstall" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
 		-V|--version) shift ; do_print_version=y  ;;
 
@@ -147,13 +148,9 @@ elif [ "$_ACTION" = "node-prepare" ] ; then
 
 
 elif [ "$_ACTION" = "node-uninstall" ] ; then
+	check_os_if_support
 	echo "Run : Node purge "
-
-
 	uninstall_clz-bd
-
-
-
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--ocs-prepare|--ocs-postrun|--ocs-deploy|--node-prepare]"; $SETCOLOR_NORMAL 
 fi
