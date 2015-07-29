@@ -28,6 +28,7 @@ _CLZ2BD_ROOT_DIR=$(cd $(dirname $0) ;pwd)
 
 #declare -i _RETRY_TIMEOUT=10
 #declare -i _RETRY_SLEEP_SEC=2
+declare _NEED_TO_REBOOT=
 
 #############
 ###  Main  ###
@@ -84,9 +85,7 @@ while [ $# -gt 0 ]; do
 		--post-tune)	shift ; _ACTION="post-tune" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
 		-V|--version) shift ; do_print_version=y  ;;
-
 		--help)	shift ; do_print_help=y ;;
-
 		--)		shift ; break ;;
 		-*)		echo "${0}: ${1}: invalid option" ; do_print_help=y; 	shift ;;
 		*)	service_name=$1 ;shift ;;
@@ -96,8 +95,8 @@ done
 [ -z "$service_name" ] && service_name="namenode"
 
 # format HDFS
-if [ "$_ACTION" = "format" -a "$service_name" = "namenode" ] ; then 
-	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || su - $_HD_USER -c "hadoop namenode -format"
+if [ "$_ACTION" = "format" -a "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then 
+	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || (su - $_HD_USER -c "hadoop namenode -format" ; _NEED_TO_REBOOT=y )
 
 # start service:
 elif [ "$_ACTION" = "start" ]; then
@@ -113,7 +112,7 @@ elif [ "$_ACTION" = "stop" ]; then
 # post-tune 
 elif [ "$_ACTION" = "post-tune" ]; then
 	tune_nic_id;
-	tune_service_trigger;
+	tune_hd_service_trigger;
 
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--format|dfs (--start|--stop)|yarn --start|--stop] "; $SETCOLOR_NORMAL 

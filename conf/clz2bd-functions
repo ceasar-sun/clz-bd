@@ -22,6 +22,11 @@ _LOAD_CLZ2BD_FUNCTIONS=y
 #############
 ### funcs ###
 #############
+check_if_root(){
+	# check if root
+	[ "$UID" != "0" ] && ( $SETCOLOR_WARNING; echo "Please use root privilege, ex: 'sudo $0'"; $SETCOLOR_NORMAL) &&	exit 1
+}
+
 check_drbl_requirement(){
 	[ -z "$(which clonezilla 2>/dev/null)" ] && ($SETCOLOR_FAILURE; echo "CLZ2BD run under Conezilla SE environment. Exit !! "; $SETCOLOR_NORMAL ) && exit 1
 
@@ -31,6 +36,7 @@ check_drbl_requirement(){
 	. /etc/drbl/drbl-ocs.conf
 	. $DRBL_SCRIPT_PATH/sbin/ocs-functions
 }
+
 check_os_if_support(){
 
 	# check OS if be supported : Ubuntut|Debian|LinuxMint
@@ -38,8 +44,10 @@ check_os_if_support(){
 	OS_Distr_ID="$(grep -E "^ID=" /etc/os-release| awk -F"=" '{print $2}')"
 	if [ -n "$( grep -E "^ID=[debian|ubuntu]" /etc/os-release 2>/dev/null )" ]; then 
 		OS_Type='DEB'
+		OS_PKG_COMM="apt-get" 
 	elif [  -n "$( grep -E "^ID=[centos]" /etc/os-release 2>/dev/null )"  ]; then
 		OS_Type='RH'
+		OS_PKG_COMM="yum" 
 	fi
 	OS_Release="$(grep -E "^PRETTY_NAME=" /etc/os-release| awk -F"=" '{print $2}')"
 	_CLZ2BD_ARCH="$(uname -m)"
@@ -49,6 +57,39 @@ check_os_if_support(){
 	echo -n "Type:" ; $SETCOLOR_SUCCESS ; echo "$OS_Type" ; $SETCOLOR_NORMAL
 }
 
+check_system_env(){
+
+	check_if_root;
+
+	# check necessary package:
+	echo "Check necessary packages:"
+	$OS_PKG_COMM update && $OS_PKG_COMM -y install $_CLZ2BD_REQUIRE_PACKAGE
+
+	# check hadoop related package:
+	echo "Check hadoop related packagse:"
+	[ -f "$_CLZ2BD_PKG_DIR/$_PKG_HADOOP" ] && ( _INST_HADOOP=y; echo "$_PKG_HADOOP : ready")|| ($SETCOLOR_FAILURE; echo "$_PKG_HADOOP not found ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
+	[ "$_INST_HBASE" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_HBASE" ] && ( _INST_HBASE=y; echo "$_PKG_HBASE : ready") || (echo "HBase : skip") 
+	[ "$_INST_ZOOKEEPER" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_ZOOKEEPER" ] && ( _INST_ZOOKEEPER=y;echo "$_PKG_ZOOKEEPER : ready" ) || (echo "ZOOKEEPER : skip") 
+	[ "$_INST_SPARK" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_SPARK" ] && ( _INST_HBASE=y;echo "$_PKG_HBASE : ready") || (echo "SPARK : skip") 
+	[ "$_INST_HIVE" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_HIVE" ] && ( _INST_HIVE=y;echo "$_PKG_HIVE : ready") || (echo "HIVE : skip")
+
+	[ ! -f "$_CLZ2BD_PKG_DIR/$_PKG_JAVA" ] && _USE_OPENJDK=y 
+
+	# add "StrictHostKeyChecking no" into /etc/ssh/ssh_config
+	echo "Add 'StrictHostKeyChecking no' into /etc/ssh/ssh_config:"
+	[ ! -f "/etc/ssh/ssh_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/ssh_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/ssh_config /etc/ssh/ssh_config.clz2bd-bak
+	sed -i -e '/StrictHostKeyChecking/d' /etc/ssh/ssh_config
+	echo  "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+	[ "$?"  = "0" ] && ( $SETCOLOR_SUCCESS; echo "done."; $SETCOLOR_NORMAL)
+
+	# create user and group for hadoop
+	$SETCOLOR_WARNING; echo "Create group: $_HD_GROUP and user:$_HD_USER ..."; $SETCOLOR_NORMAL
+	[ -z "$(grep -E "^$_HD_GROUP:" /etc/group 2>/dev/null)" ] && groupadd $_HD_GROUP
+	[ -z "$(id -u $_HD_USER 2>/dev/null)" ] && adduser --disabled-password  --gecos "hadoop user(created by clz2bd)" --ingroup $_HD_GROUP $_HD_USER
+	echo "Copy ssh public key pairs : '${_HD_SSHKEY}*' ... "
+	mkdir -p /home/$_HD_USER/.ssh ; cp $_HD_SSHKEY* /home/$_HD_USER/.ssh/
+	cp ${_HD_SSHKEY}.pub /home/$_HD_USER/.ssh/authorized_keys ; chown -R $_HD_USER:$_HD_GROUP /home/$_HD_USER
+}
 
 do_prepare_network(){
 	
@@ -75,8 +116,9 @@ do_prepare_network(){
 	# Parse command-line options
 	while [ $mac_amount -lt 1 ]; do
 		$SETCOLOR_WARNING
-		echo "At least 1 mac address is necessary for this Hadoop cluster. "
-		read -p "Input mac-ip pairs (sample:$_CLZ2BD_ROOT_DIR/conf/mac-list.sample.txt) list file [$_CLZ2BD_ROOT_DIR/mac-list.txt] or [Ctrl+C] to exit: " _answer
+		#echo "At least 1 mac address is necessary for this Hadoop cluster. "
+		echo "Please input fullpath for mac-ip pairs file, see sample: '$_CLZ2BD_ROOT_DIR/conf/mac-list.sample.txt'.[Ctrl+C] to exit."
+		read _answer
 		$SETCOLOR_NORMAL
 
 		[ ! -f "$_answer" ] && echo "File:'$_answer' not exist ?" && continue;
@@ -230,45 +272,6 @@ search_target_dev(){
 		fi
 	done
 
-}
-
-check_if_root(){
-	# check if root
-	[ "$UID" != "0" ] && ( $SETCOLOR_WARNING; echo "Please use root privilege, ex: 'sudo $0'"; $SETCOLOR_NORMAL) &&	exit 1
-}
-
-check_system_env(){
-
-	check_if_root;
-
-	# check necessary package:
-	echo "Check necessary packages:"
-	$OS_PKG_COMM update && $OS_PKG_COMM -y install $_CLZ2BD_REQUIRE_PACKAGE
-
-	# check hadoop related package:
-	echo "Check hadoop related packagse:"
-	[ -f "$_CLZ2BD_PKG_DIR/$_PKG_HADOOP" ] && ( _INST_HADOOP=y; echo "$_PKG_HADOOP : ready")|| ($SETCOLOR_FAILURE; echo "$_PKG_HADOOP not found ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
-	[ "$_INST_HBASE" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_HBASE" ] && ( _INST_HBASE=y; echo "$_PKG_HBASE : ready") || (echo "HBase : skip") 
-	[ "$_INST_ZOOKEEPER" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_ZOOKEEPER" ] && ( _INST_ZOOKEEPER=y;echo "$_PKG_ZOOKEEPER : ready" ) || (echo "ZOOKEEPER : skip") 
-	[ "$_INST_SPARK" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_SPARK" ] && ( _INST_HBASE=y;echo "$_PKG_HBASE : ready") || (echo "SPARK : skip") 
-	[ "$_INST_HIVE" = "y" -a -f "$_CLZ2BD_PKG_DIR/$_PKG_HIVE" ] && ( _INST_HIVE=y;echo "$_PKG_HIVE : ready") || (echo "HIVE : skip")
-
-	[ ! -f "$_CLZ2BD_PKG_DIR/$_PKG_JAVA" ] && _USE_OPENJDK=y 
-
-	# add "StrictHostKeyChecking no" into /etc/ssh/ssh_config
-	echo "Add 'StrictHostKeyChecking no' into /etc/ssh/ssh_config:"
-	[ ! -f "/etc/ssh/ssh_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/ssh_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/ssh_config /etc/ssh/ssh_config.clz2bd-bak
-	sed -i -e '/StrictHostKeyChecking/d' /etc/ssh/ssh_config
-	echo  "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
-	[ "$?"  = "0" ] && ( $SETCOLOR_SUCCESS; echo "done."; $SETCOLOR_NORMAL)
-
-	# create user and group for hadoop
-	$SETCOLOR_WARNING; echo "Create group: $_HD_GROUP and user:$_HD_USER ..."; $SETCOLOR_NORMAL
-	[ -z "$(grep -E "^$_HD_GROUP:" /etc/group 2>/dev/null)" ] && groupadd $_HD_GROUP
-	[ -z "$(id -u $_HD_USER 2>/dev/null)" ] && adduser --disabled-password  --gecos "hadoop user(created by clz2bd)" --ingroup $_HD_GROUP $_HD_USER
-	echo "Copy ssh public key pairs : '${_HD_SSHKEY}*' ... "
-	mkdir -p /home/$_HD_USER/.ssh ; cp $_HD_SSHKEY* /home/$_HD_USER/.ssh/
-	cp ${_HD_SSHKEY}.pub /home/$_HD_USER/.ssh/authorized_keys ; chown -R $_HD_USER:$_HD_GROUP /home/$_HD_USER
 }
 
 install_pkg(){

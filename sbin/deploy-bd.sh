@@ -31,7 +31,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		-b|--batch) shift ; _BATCH_MODE="y" ;;
 		-d|--debug) shift ; _DEBUG=y ;;
-		--ocs-deploy)	shift ; _ACTION="deploy" ;;
+		--deploy)	shift ; _ACTION="deploy" ;;
 		--ocs-prepare)	shift ; _ACTION="ocs-prepare" ;;
 		--ocs-deploy)	shift ; _ACTION="ocs-deploy" ;;
 		--post-tune)	shift ; _ACTION="post-tune" ;;
