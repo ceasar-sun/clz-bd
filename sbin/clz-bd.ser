@@ -113,6 +113,7 @@ elif [ "$_ACTION" = "stop" ]; then
 # post-tune 
 elif [ "$_ACTION" = "post-tune" ]; then
 	tune_nic_id;
+	tune_service_trigger;
 
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--format|dfs (--start|--stop)|yarn --start|--stop] "; $SETCOLOR_NORMAL 
