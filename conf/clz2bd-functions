@@ -57,13 +57,15 @@ check_os_if_support(){
 	echo -n "Type:" ; $SETCOLOR_SUCCESS ; echo "$OS_Type" ; $SETCOLOR_NORMAL
 }
 
-check_system_env(){
-
-	check_if_root;
-
+install_necessary_pkg(){
 	# check necessary package:
 	echo "Check necessary packages:"
 	$OS_PKG_COMM update && $OS_PKG_COMM -y install $_CLZ2BD_REQUIRE_PACKAGE
+}
+
+do_prepare_system_env(){
+
+	check_if_root;
 
 	# check hadoop related package:
 	echo "Check hadoop related packagse:"
@@ -83,11 +85,11 @@ check_system_env(){
 	[ "$?"  = "0" ] && ( $SETCOLOR_SUCCESS; echo "done."; $SETCOLOR_NORMAL)
 
 	# Force key-authorization only for hduser /etc/ssh/sshd_config
-	echo "Force key-authorization only for '$_HD_USER' into /etc/ssh/sshdsshdssh_config:"
-	[ ! -f "/etc/ssh/sshdssh_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/sshdsshdssh_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/sshd_config /etc/ssh/sshd_config.clz2bd-bak
+	echo "Force key-authorization only for '$_HD_USER' into /etc/ssh/sshd_config:"
+	[ ! -f "/etc/ssh/sshd_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/sshd_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/sshd_config /etc/ssh/sshd_config.clz2bd-bak
 	sed -i -e "/$_HD_USER/d" -e "s/^PasswordAuthentication/d" /etc/ssh/sshd_config
 
-	cat >> /etc/ssh/ssh_config <<EOF
+	cat >> /etc/ssh/sshd_config <<EOF
 
 # Add by clz-bd.check_system_env to force key-authorization only for $_HD_USER
 Match User $_HD_USER
@@ -346,21 +348,6 @@ config_system_env(){
 		_this_hostname="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $3 }' )"
 		[ -z "$_this_ip" ] && continue || _if_belone_cluster=1 ;
 
-		echo "Set hostname as : $_this_hostname "
-		echo "$_this_hostname" > /etc/hostname
-
-		echo "Set /etc/hosts : "
-		echo "# Generate via clz2bd" >> /etc/hosts
-		awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
-		_HD_SLAVE_LIST="$(awk -F ";" '{print $3}' $_HD_MAC_IP_NAME_CONF | grep "^slave-")"
-		cp /etc/hosts /etc/hosts.bak 
-		sed -i -s "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
-		for slave in $_HD_SLAVE_LIST ; do 
-			s_ip=$(grep $slave $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}')
-			sed -i -s "/^$s_ip[[:space:]]/d" /etc/hosts
-			echo "$s_ip	$slave" >> /etc/hosts
-		done
-
 		echo "Generate /etc/network/interfaces : $_this_ip in $_this_mac"
 		cat > /etc/network/interfaces << EOF
 # Generate by clz2bd
@@ -377,14 +364,30 @@ iface $_this_if inet static
         dns-nameservers $_HD_NW_DNS
 
 EOF
-		# doen for thos node
+		# doen for this node
 		break;
-
 	done
+
+	if [ "$if_belone_cluster" == "1" ] ; then
+		echo "Set hostname as : $_this_hostname "
+		echo "$_this_hostname" > /etc/hostname
+
+		echo "Set /etc/hosts : "
+		echo "# Generate via clz2bd" >> /etc/hosts
+		awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
+		_HD_SLAVE_LIST="$(awk -F ";" '{print $3}' $_HD_MAC_IP_NAME_CONF | grep "^slave-")"
+		cp /etc/hosts /etc/hosts.bak 
+		sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
+		for slave in $_HD_SLAVE_LIST ; do 
+			s_ip=$(grep $slave $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}')
+			sed -i -e "/^$s_ip[[:space:]]/d" /etc/hosts
+			echo "$s_ip	$slave" >> /etc/hosts
+		done
+
+	fi
 
 	[ -z "$_if_belone_cluster" ] && (SETCOLOR_FAILURE; echo "This machine not belone to CLZ-BD cluster ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
 	
-
 	echo "set 'HADOOP_HOME=$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR' into profile ..."
 	[ -e "/etc/profile" ] && cp /etc/profile /etc/profile.clz2bd.bak
 	sed -i -e '/\/etc\/clz2bd.profile/d' /etc/profile && echo  ". /etc/clz2bd.profile" >> /etc/profile	
@@ -641,7 +644,7 @@ uninstall_clz-bd(){
 	done
 
 	userdel -r $_HD_USER
-	groupdel $HD_GROUP
+	groupdel $_HD_GROUP
 
 	echo "Remove PKG:"
 	if [ -n "$(echo $_PKG_JAVA | grep 'openjdk' 2>/dev/null)" ] ; then 
@@ -653,15 +656,24 @@ uninstall_clz-bd(){
 		fi
 	fi
 
-	echo "Remove /etc/"
+	$SETCOLOR_WARNING; echo "Remove /etc/" ; $SETCOLOR_NORMAL;
 	[ -e "/etc/clz2bd.profile" ] && mv /etc/clz2bd.profile /etc/clz2bd.profile.bak
 	
-	echo "Remove folder $_PKG_INST_ROO : "
-	[ -d "$_PKG_INST_ROO/$_PKG_INST_JAVA_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_JAVA_DIR
-	[ -d "$_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR
-	[ -d "$_PKG_INST_ROO/$_PKG_INST_HADOOP_TMP" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_TMP ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_HADOOP_TMP
+	$SETCOLOR_WARNING ; echo "Remove nodes for /etc/hosts"; $SETCOLOR_NORMAL;
+	_HD_SLAVE_IP_LIST="$(awk -F ";" '$3 ~/^slave-/ {print $2}' $_HD_MAC_IP_NAME_CONF )"
+	cp /etc/hosts /etc/hosts.bak 
+	sed -i -e "s/^#127.0.1.1/127.0.1.1/g" /etc/hosts
+	sed -i -e "/[[:space:]]+master[[:space:]]*/d" /etc/hosts
+	for s_ip in $_HD_SLAVE_IP_LIST ; do 
+		sed -i -e "/^[[:space:]]*$s_ip[[:space:]]*/d" /etc/hosts
+	done
 
-	echo "Backup to ${_CLZ2BD_PNAME} -> $_CLZ2BD_PNAME}.bak"
+	echo "Remove folder $_PKG_INST_ROO : "
+	[ -d "$_PKG_INST_ROOT/$_PKG_INST_JAVA_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROOT/$_PKG_INST_JAVA_DIR
+	[ -d "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR
+	[ -d "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_TMP" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_TMP ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROOT/$_PKG_INST_HADOOP_TMP
+
+	echo "Backup to ${_CLZ2BD_PNAME} -> ${_CLZ2BD_PNAME}.bak"
 	mv $_CLZ2BD_DEFAULT_ROOT ${_CLZ2BD_DEFAULT_ROOT}.bak
 
 }

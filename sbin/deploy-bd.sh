@@ -103,7 +103,8 @@ if [ "$_ACTION" = "ocs-postrun" ] ; then
 elif [ "$_ACTION" = "deploy" ] ; then
 	echo "Run : OCS Deploy "
 	check_os_if_support; 
-	check_system_env;
+	install_necessary _pkg
+	do_prepare_system_env;
 	install_pkg;
 	config_system_env;
 	config_hadoop_env;
@@ -113,6 +114,7 @@ elif [ "$_ACTION" = "ocs-prepare" ] ; then
 
 	check_drbl_requirement;
 	check_if_root;
+	check_os_if_support;
 
 	echo "Run : OCS Prepare "
 	[ -f $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf ] && mv $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf.bak
@@ -144,8 +146,9 @@ EOF
 	$SETCOLOR_NORMAL;
 
 elif [ "$_ACTION" = "node-prepare" ] ; then
-	check_os_if_support;
 	check_if_root;
+	check_os_if_support;
+	install_necessary _pkg
 
 	echo "Run : Node Prepare "
 
