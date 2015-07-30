@@ -100,7 +100,7 @@ done
 
 # format HDFS
 if [ "$_ACTION" = "format" -a "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then 
-	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || (su - $_HD_USER -c "hadoop namenode -format" ; _NEED_TO_REBOOT=y )
+	[ -d "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_TMP}/dfs/name/current" ] && echo "Skip namenode format ." || (su - $_HD_USER -c "hadoop namenode -format" )
 
 # start service:
 elif [ "$_ACTION" = "start" ]; then

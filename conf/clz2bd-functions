@@ -82,6 +82,21 @@ check_system_env(){
 	echo  "StrictHostKeyChecking no" >> /etc/ssh/ssh_config
 	[ "$?"  = "0" ] && ( $SETCOLOR_SUCCESS; echo "done."; $SETCOLOR_NORMAL)
 
+	# Force key-authorization only for hduser /etc/ssh/sshd_config
+	echo "Force key-authorization only for '$_HD_USER' into /etc/ssh/sshdsshdssh_config:"
+	[ ! -f "/etc/ssh/sshdssh_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/sshdsshdssh_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/sshd_config /etc/ssh/sshd_config.clz2bd-bak
+	sed -i -e "/$_HD_USER/d" -e "s/^PasswordAuthentication/d" /etc/ssh/sshd_config
+
+	cat >> /etc/ssh/ssh_config <<EOF
+
+# Add by clz-bd.check_system_env to force key-authorization only for $_HD_USER
+Match User $_HD_USER
+PasswordAuthentication no
+
+EOF
+
+	[ "$?"  = "0" ] && ( $SETCOLOR_SUCCESS; echo "done."; $SETCOLOR_NORMAL)
+
 	# create user and group for hadoop
 	$SETCOLOR_WARNING; echo "Create group: $_HD_GROUP and user:$_HD_USER ..."; $SETCOLOR_NORMAL
 	[ -z "$(grep -E "^$_HD_GROUP:" /etc/group 2>/dev/null)" ] && groupadd $_HD_GROUP
@@ -426,8 +441,13 @@ tune_nic_id(){
 			ifdown $_orig_nic_id
 			ifconfig $_orig_nic_id down
 
-			if [ -z "$_orig_nic_id"  ] ; then 
+			# no this IP configuration
+			if [ -z "$_orig_nic_id"  ] ; then
 				if [ "$OS_Type" = 'DEB' ] ; then
+					cp /etc/network/interfaces /etc/network/interfaces.clz-tune.bak
+					# mark if this device be setup as other IP
+					sed -i -e "s/^[[:space:]]*auto[[:space:]]\+$_this_if/#auto $_this_if/g"  -e "s/^[[:space:]]*iface[[:space:]]\+$_this_if/iface $_this_if.clz-bd.bak/g" /etc/network/interfaces
+
 					cat >> /etc/network/interfaces << EOF
 # Generate by tune_nic_id
 auto $_this_if
