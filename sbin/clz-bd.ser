@@ -112,6 +112,7 @@ elif [ "$_ACTION" = "stop" ]; then
 # post-tune 
 elif [ "$_ACTION" = "post-tune" ]; then
 	tune_nic_id;
+	tune_hostname;
 	tune_hd_service_trigger;
 
 else

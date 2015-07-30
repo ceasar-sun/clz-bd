@@ -461,6 +461,27 @@ EOF
 	done
 }
 
+tune_hostname(){
+	echo "Adjust HOSTNAME ...";
+
+	local _this_mac
+	local _this_if
+	local _expected_hostname
+	local _current_hostname
+
+	local _if_belone_cluster
+	for _this_if in `ls /sys/class/net/` ; do 
+		[ "$i" == "lo" ] && continue; 
+		_this_mac="$(cat /sys/class/net/${_this_if}/address)"
+		_expected_hostname="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $3 }' )"
+		if [ -n "$_expected_hostname" -a "$_expected_hostname" != "$(hostname)" ] ; then
+			cp /etc/hostname /etc/hostname.clz-bd.bak && echo "$_expected_hostname" > /etc/hostname
+			hostname -F /etc/hostname
+			break;
+		fi
+	done
+}
+
 tune_hd_service_trigger(){
 
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
@@ -612,6 +633,9 @@ uninstall_clz-bd(){
 		fi
 	fi
 
+	echo "Remove /etc/"
+	[ -e "/etc/clz2bd.profile" ] && mv /etc/clz2bd.profile /etc/clz2bd.profile.bak
+	
 	echo "Remove folder $_PKG_INST_ROO : "
 	[ -d "$_PKG_INST_ROO/$_PKG_INST_JAVA_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_JAVA_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_JAVA_DIR
 	[ -d "$_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR" ] && ($SETCOLOR_WARNING ; echo -n "$_PKG_INST_HADOOP_DIR ... " ;$SETCOLOR_NORMAL; ) && rm -rf $_PKG_INST_ROO/$_PKG_INST_HADOOP_DIR
