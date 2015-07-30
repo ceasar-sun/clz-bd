@@ -20,8 +20,12 @@
 ####################################################
 export PATH=$PATH:/usr/sbin:/bin:/sbin:/sbin
 
+_CLZ2BD_DEFAULT_ROOT="/opt/clz-bd"
+
 # Load Clz2BD setting and functions
-_CLZ2BD_ROOT_DIR=$(cd $(dirname $0) ;pwd)
+_CLZ2BD_WS_DIR=$(cd $(dirname $0) ;pwd)
+
+ [ -d "/opt/clz-bd" ] && _CLZ2BD_ROOT_DIR="$_CLZ2BD_DEFAULT_ROOT" || _CLZ2BD_ROOT_DIR="$_CLZ2BD_WS_DIR"
 
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd.conf" ] && [ -z "$_LOAD_CLZ2BD_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd.conf
 [ -f "$_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf" ] && [ -z "$_LOAD_CLZ2BD_CUSTOM_CONF" ] && . $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf
