@@ -60,7 +60,10 @@ check_os_if_support(){
 install_necessary_pkg(){
 	# check necessary package:
 	echo "Check necessary packages:"
-	$OS_PKG_COMM update && $OS_PKG_COMM -y install $_CLZ2BD_REQUIRE_PACKAGE
+	$OS_PKG_COMM update 
+	read -p "Update system ? [Y/n]" _answer
+	[ -n "$(echo $_answer | grep -iE  "^n$")" ] || $OS_PKG_COMM dist-upgrade
+	$OS_PKG_COMM -y install $_CLZ2BD_REQUIRE_PACKAGE
 }
 
 do_prepare_system_env(){
@@ -87,7 +90,7 @@ do_prepare_system_env(){
 	# Force key-authorization only for hduser /etc/ssh/sshd_config
 	echo "Force key-authorization only for '$_HD_USER' into /etc/ssh/sshd_config:"
 	[ ! -f "/etc/ssh/sshd_config" ] && ( $SETCOLOR_FAILURE; echo "/etc/ssh/sshd_config not exist ! Exit .. ";$SETCOLOR_NORMAL;  exit 1) || cp /etc/ssh/sshd_config /etc/ssh/sshd_config.clz2bd-bak
-	sed -i -e "/$_HD_USER/d" -e "s/^PasswordAuthentication/d" /etc/ssh/sshd_config
+	sed -i -e "/$_HD_USER/d" -e "/^PasswordAuthentication/d" /etc/ssh/sshd_config
 
 	cat >> /etc/ssh/sshd_config <<EOF
 
@@ -134,9 +137,9 @@ do_prepare_network(){
 	while [ $mac_amount -lt 1 ]; do
 		$SETCOLOR_WARNING
 		#echo "At least 1 mac address is necessary for this Hadoop cluster. "
-		echo "Please input fullpath for mac-ip pairs file, see sample: '$_CLZ2BD_ROOT_DIR/conf/mac-list.sample.txt'.[Ctrl+C] to exit."
-		read _answer
+		echo "Input mac-ip pairs file, see sample: '$_CLZ2BD_ROOT_DIR/conf/mac-list.sample.txt'.[Ctrl+C] to exit."
 		$SETCOLOR_NORMAL
+		read _answer
 
 		[ ! -f "$_answer" ] && echo "File:'$_answer' not exist ?" && continue;
 		mac_amount="$(grep -E "^$MAC_reg" $_answer | wc -l )"
@@ -335,58 +338,57 @@ config_system_env(){
 	local _this_if
 	local _this_ip
 	local _this_hostname
-	local _if_belone_cluster
+	local _if_belong_cluster
 
-
-	_this_mac="$(ifconfig -a | grep HWaddr | head -n 1 | awk -F " " '{print $5}')"
-	_this_if="$(ifconfig -a | grep HWaddr | head -n 1 | awk -F " " '{print $1}')"
+	echo "Configure network :"
+	cat > /etc/network/interfaces << EOF
+# Generate by clz2bd
+auto lo
+iface lo inet loopback
+EOF
 
 	for _this_if in `ls /sys/class/net/` ; do 
 		[ "$i" == "lo" ] && continue; 
 		_this_mac="$(cat /sys/class/net/${_this_if}/address)"
 		_this_ip="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $2 }' )"
-		_this_hostname="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $3 }' )"
-		[ -z "$_this_ip" ] && continue || _if_belone_cluster=1 ;
+		[ -z "$_this_hostname" ]  && _this_hostname="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $3 }' )"
+		if [ -n "$_this_ip" ] ; then
+			_if_belong_cluster=1
 
-		echo "Generate /etc/network/interfaces : $_this_ip in $_this_mac"
-		cat > /etc/network/interfaces << EOF
-# Generate by clz2bd
-auto lo
-iface lo inet loopback
+			echo "Generate /etc/network/interfaces : '$_this_ip' in '$_this_mac'"
+			cat > /etc/network/interfaces << EOF
 
 auto $_this_if
 iface $_this_if inet static
-        address $_this_ip
-        netmask ${_HD_NW_NETMASK}
-        network ${_HD_NW_NETWORK}
-        broadcast ${_HD_NW_BROADCAST_IP}
-        gateway ${_HD_NW_GATEWAY}
-        dns-nameservers $_HD_NW_DNS
-
+	address $_this_ip
+	netmask ${_HD_NW_NETMASK}
+	network ${_HD_NW_NETWORK}
+	broadcast ${_HD_NW_BROADCAST_IP}
+	gateway ${_HD_NW_GATEWAY}
+	dns-nameservers $_HD_NW_DNS
 EOF
-		# doen for this node
-		break;
+	fi
 	done
 
-	if [ "$if_belone_cluster" == "1" ] ; then
-		echo "Set hostname as : $_this_hostname "
+	if [ "$_if_belong_cluster" == "1" ] ; then
+		echo "Set hostname : $_this_hostname "
 		echo "$_this_hostname" > /etc/hostname
 
 		echo "Set /etc/hosts : "
 		echo "# Generate via clz2bd" >> /etc/hosts
 		awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
-		_HD_SLAVE_LIST="$(awk -F ";" '{print $3}' $_HD_MAC_IP_NAME_CONF | grep "^slave-")"
-		cp /etc/hosts /etc/hosts.bak 
+		_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"
+		cp /etc/hosts /etc/hosts.bak
 		sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
 		for slave in $_HD_SLAVE_LIST ; do 
-			s_ip=$(grep $slave $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}')
+			s_ip=$(grep -E ";$slave[[:space:]]*$" $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}' | head -n 1)
 			sed -i -e "/^$s_ip[[:space:]]/d" /etc/hosts
 			echo "$s_ip	$slave" >> /etc/hosts
 		done
 
 	fi
 
-	[ -z "$_if_belone_cluster" ] && (SETCOLOR_FAILURE; echo "This machine not belone to CLZ-BD cluster ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
+	[ -z "$_if_belong_cluster" ] && ($SETCOLOR_FAILURE; echo "This machine not belone to CLZ-BD cluster ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
 	
 	echo "set 'HADOOP_HOME=$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR' into profile ..."
 	[ -e "/etc/profile" ] && cp /etc/profile /etc/profile.clz2bd.bak

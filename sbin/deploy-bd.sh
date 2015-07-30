@@ -103,7 +103,7 @@ if [ "$_ACTION" = "ocs-postrun" ] ; then
 elif [ "$_ACTION" = "deploy" ] ; then
 	echo "Run : OCS Deploy "
 	check_os_if_support; 
-	install_necessary _pkg
+	install_necessary_pkg
 	do_prepare_system_env;
 	install_pkg;
 	config_system_env;
@@ -148,7 +148,7 @@ EOF
 elif [ "$_ACTION" = "node-prepare" ] ; then
 	check_if_root;
 	check_os_if_support;
-	install_necessary _pkg
+	install_necessary_pkg
 
 	echo "Run : Node Prepare "
 
@@ -159,7 +159,7 @@ elif [ "$_ACTION" = "node-prepare" ] ; then
 	
 	[ -d "$_CLZ2BD_DEFAULT_ROOT" ] || rsync -avP --exclude=.git* ${_CLZ2BD_ROOT_DIR}/ ${_CLZ2BD_DEFAULT_ROOT}/
 
-	$SETCOLOR_WARNING; read -p "Run : ${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy " _no_input ; $SETCOLOR_NORMAL;
+	$SETCOLOR_WARNING; echo "Run : ${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy " ; $SETCOLOR_NORMAL;
 	${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy
 
 elif [ "$_ACTION" = "node-uninstall" ] ; then
