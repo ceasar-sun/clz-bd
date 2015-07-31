@@ -104,7 +104,7 @@ if [ "$_ACTION" = "format" -a "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; th
 
 # start service:
 elif [ "$_ACTION" = "start" ]; then
-	wait_for_all_slave;
+	#wait_for_all_slave;
 	echo "Start $service_name : su - $_HD_USER -c \"start-${service_name}.sh\""
 	su - $_HD_USER -c "start-${service_name}.sh"
 

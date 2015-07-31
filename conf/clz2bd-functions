@@ -511,8 +511,8 @@ tune_hd_service_trigger(){
 
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
 		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser --format
-		#${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser dfs --start
-		#${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser yarn --start
+		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser dfs --start
+		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser yarn --start
 	fi	
 
 }
@@ -580,7 +580,7 @@ EOF
 </configuration>
 EOF
 
-cat > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/yarn-site.xml << EOF
+	cat > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/yarn-site.xml << EOF
 <?xml version="1.0"?>
 <configuration>
 <property>

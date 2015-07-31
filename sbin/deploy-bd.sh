@@ -32,11 +32,11 @@ while [ $# -gt 0 ]; do
 		-b|--batch) shift ; _BATCH_MODE="y" ;;
 		-d|--debug) shift ; _DEBUG=y ;;
 		--deploy)	shift ; _ACTION="deploy" ;;
+		-i|--node-install)	shift ; _ACTION="node-install" ;;
+		-u|--node-uninstall)	shift ; _ACTION="node-uninstall" ;;
 		--ocs-prepare)	shift ; _ACTION="ocs-prepare" ;;
 		--ocs-deploy)	shift ; _ACTION="ocs-deploy" ;;
 		--post-tune)	shift ; _ACTION="post-tune" ;;
-		--node-prepare)	shift ; _ACTION="node-prepare" ;;
-		--node-uninstall)	shift ; _ACTION="node-uninstall" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
 		-V|--version) shift ; do_print_version=y  ;;
 
@@ -50,9 +50,26 @@ done
 
 [ -n "$(cat /proc/cmdline | grep -iE ' -clzbd|-o1|ocs_postrun*=')" ] && _ACTION="ocs-postrun"
 
-[ -z "$_ACTION" ] && _ACTION="ocs-prepare" 
+[ -z "$_ACTION" ] && _ACTION="ocs-install" 
 
-if [ "$_ACTION" = "ocs-postrun" ] ; then
+if [ "$_ACTION" = "node-install" ] ; then
+	check_if_root;
+	check_os_if_support;
+	install_necessary_pkg
+
+	echo "Run : Node Prepare "
+
+	[ -f $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf ] && mv $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf.bak
+	do_prepare_network
+	do_prepare_pkg
+	do_prepare_sshkey
+	
+	[ -d "$_CLZ2BD_DEFAULT_ROOT" ] || rsync -avP --exclude=.git* ${_CLZ2BD_ROOT_DIR}/ ${_CLZ2BD_DEFAULT_ROOT}/
+
+	$SETCOLOR_WARNING; echo "Run : ${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy " ; $SETCOLOR_NORMAL;
+	${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy
+
+elif [ "$_ACTION" = "ocs-postrun" ] ; then
 
 	echo "Run :OCS Postrun"
 	check_drbl_requirement;
@@ -145,31 +162,13 @@ EOF
 	echo "You can modify /usr/share/drbl/postrun/ocs/$_CLZ2BD_PNAME/*.conf with your needs."
 	$SETCOLOR_NORMAL;
 
-elif [ "$_ACTION" = "node-prepare" ] ; then
-	check_if_root;
-	check_os_if_support;
-	install_necessary_pkg
-
-	echo "Run : Node Prepare "
-
-	[ -f $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf ] && mv $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf $_CLZ2BD_ROOT_DIR/conf/clz2bd-custom.conf.bak
-	do_prepare_network
-	do_prepare_pkg
-	do_prepare_sshkey
-	
-	[ -d "$_CLZ2BD_DEFAULT_ROOT" ] || rsync -avP --exclude=.git* ${_CLZ2BD_ROOT_DIR}/ ${_CLZ2BD_DEFAULT_ROOT}/
-
-	$SETCOLOR_WARNING; echo "Run : ${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy " ; $SETCOLOR_NORMAL;
-	${_CLZ2BD_DEFAULT_ROOT}/sbin/deploy-bd.sh --deploy
-
 elif [ "$_ACTION" = "node-uninstall" ] ; then
 	check_os_if_support
 	echo "Run : Node purge "
 	uninstall_clz-bd
 else
-	$SETCOLOR_WARNING ;echo "Usage: $0 [--ocs-prepare|--ocs-postrun|--deploy|--node-prepare|--node-uninstall]"; $SETCOLOR_NORMAL 
+	$SETCOLOR_WARNING ;echo "Usage: $0 [--ocs-prepare|--ocs-postrun|--deploy|--node-install|--node-uninstall]"; $SETCOLOR_NORMAL 
 fi
-
 
 exit 0
 
