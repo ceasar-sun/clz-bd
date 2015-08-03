@@ -425,7 +425,7 @@ tune_nic_id(){
 	for _this_if in `ls /sys/class/net/` ; do 
 		[ "$i" == "lo" ] && continue; 
 		_this_mac="$(cat /sys/class/net/${_this_if}/address)"
-		_expected_ip="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $2 }' | sed -e 's/\.0*/\./g')"
+		_expected_ip="$(grep -i $_this_mac $_HD_MAC_IP_NAME_CONF | awk -F ";" '{ print $2 }' | sed -e 's/\.0\+\([0-9]\+\)/\.\1/g')"
 		_current_ip="$(ip addr show $_this_if  | grep -E '^[[:space:]]+inet[[:space:]]' | awk '{print $2}' | awk -F "/" '{print $1}')"
 
 		if [ -z "$_expected_ip" ] ; then
