@@ -126,6 +126,7 @@ do_prepare_network(){
 	[ -f "/etc/resolv.conf" ] && _HD_NW_DNS="$(awk '/^nameserver/{printf "%s ",$2}' /etc/resolv.conf)"
 	[ -z "$_HD_NW_DNS" ] && $_HD_NW_DNS=$_HD_NW_DNS_DEF
 
+	[ -f "$_HD_MACLIST" ] && mv $_HD_MACLIST ${_HD_MACLIST}.bak
 	[ -f "/etc/dhcp/dhcpd.conf" ] && ( grep "hardware ethernet " /etc/dhcp/dhcpd.conf | awk -F " " '{print $3}'| sed -s 's|;||g' > $_HD_MACLIST )
 	[ -f "$_HD_MACLIST" ] && mac_amount="$(cat $_HD_MACLIST | wc -l )" || mac_amount=0
 	if [ $mac_amount -gt 0 ] ; then
@@ -143,7 +144,7 @@ do_prepare_network(){
 
 		[ ! -f "$_answer" ] && echo "File:'$_answer' not exist ?" && continue;
 		mac_amount="$(grep -E "^$MAC_reg" $_answer | wc -l )"
-		[ $mac_amount -gt 0 ] && cp $_answer $_HD_MACLIST
+		[ $mac_amount -gt 0 ] && (grep -E "^$MAC_reg" $_answer >> $_HD_MACLIST)
 	done
 
 	max_ip_capability="$(ipcalc $_HD_NW_NETWORK/$_HD_NW_NETMASK | grep "^Hosts/Net"| awk -F " " '{print $2}')"
@@ -532,6 +533,9 @@ EOF
 	if [ "$(echo $_HD_SLAVE_LIST | wc -w)" = "0" ] ; then 
 		echo localhost > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
 	else
+		[ -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters" ] && mv $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters.bak
+		echo master > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters
+
 		[ -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves" ] && mv $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves.bak
 		touch $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
 		for slave in $_HD_SLAVE_LIST; do

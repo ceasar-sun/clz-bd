@@ -50,7 +50,7 @@ done
 
 [ -n "$(cat /proc/cmdline | grep -iE ' -clzbd|-o1|ocs_postrun*=')" ] && _ACTION="ocs-postrun"
 
-[ -z "$_ACTION" ] && _ACTION="ocs-install" 
+[ -z "$_ACTION" ] && _ACTION="node-install" 
 
 if [ "$_ACTION" = "node-install" ] ; then
 	check_if_root;
