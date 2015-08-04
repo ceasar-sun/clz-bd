@@ -335,6 +335,7 @@ install_pkg(){
 }
 config_system_env(){
 
+if [ 1 = 0] ; then 
 	local _this_mac
 	local _this_if
 	local _this_ip
@@ -376,11 +377,12 @@ EOF
 		echo "$_this_hostname" > /etc/hostname
 
 		echo "Set /etc/hosts : "
+		cp /etc/hosts /etc/hosts.bak
+		sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
+
 		echo "# Generate via clz2bd" >> /etc/hosts
 		awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
 		_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"
-		cp /etc/hosts /etc/hosts.bak
-		sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
 		for slave in $_HD_SLAVE_LIST ; do 
 			s_ip=$(grep -E ";$slave[[:space:]]*$" $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}' | head -n 1)
 			sed -i -e "/^$s_ip[[:space:]]/d" /etc/hosts
@@ -390,6 +392,9 @@ EOF
 	fi
 
 	[ -z "$_if_belong_cluster" ] && ($SETCOLOR_FAILURE; echo "This machine not belone to CLZ-BD cluster ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
+
+fi
+
 	
 	echo "set 'HADOOP_HOME=$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR' into profile ..."
 	[ -e "/etc/profile" ] && cp /etc/profile /etc/profile.clz2bd.bak
@@ -413,7 +418,7 @@ EOF
 }
 
 tune_nic_id(){
-	echo "Adjust network device ID ...";
+	echo "Tune network for each NIC ...";
 
 	local _this_mac
 	local _this_if
@@ -436,7 +441,7 @@ tune_nic_id(){
 			continue
 		else
 			if [ "$OS_Type" = 'DEB' ] ; then
-				_orig_nic_id="$(tac /etc/network/interfaces | grep -A 3 "$_expected_ip[[:space:]]*$"  | grep 'iface' | head -n 1 | awk '{print $2}')"
+				_orig_nic_id="$(tac /etc/network/interfaces 2>/dev/nill | grep -A 3 "$_expected_ip[[:space:]]*$"  | grep 'iface' | head -n 1 | awk '{print $2}')"
 			elif [ "$OS_Type" = 'RH' ] ; then
 				echo "RH type: skip ..."
 			fi
@@ -450,7 +455,7 @@ tune_nic_id(){
 			# no this IP configuration
 			if [ -z "$_orig_nic_id"  ] ; then
 				if [ "$OS_Type" = 'DEB' ] ; then
-					cp /etc/network/interfaces /etc/network/interfaces.clz-tune.bak
+					[ -e "/etc/network/interfaces" ] && cp /etc/network/interfaces /etc/network/interfaces.clz-tune.bak
 					# mark if this device be setup as other IP
 					sed -i -e "s/^[[:space:]]*auto[[:space:]]\+$_this_if/#auto $_this_if/g"  -e "s/^[[:space:]]*iface[[:space:]]\+$_this_if/iface $_this_if.clz-bd.bak/g" /etc/network/interfaces
 
@@ -488,7 +493,7 @@ EOF
 }
 
 tune_hostname(){
-	echo "Adjust HOSTNAME ...";
+	echo "Tune 'Hostname' ...";
 
 	local _this_mac
 	local _this_if
@@ -508,6 +513,22 @@ tune_hostname(){
 	done
 }
 
+tune_hosts(){
+
+	echo "Tune 'Hosts' : "
+	cp /etc/hosts /etc/hosts.clz-bd.bak
+	sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
+
+	sed -i -e "/[[:space:]]$_HD_NAME_MASTER[[:space:]]*/d" /etc/hosts
+	awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
+	_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"
+	for slave in $_HD_SLAVE_LIST ; do 
+		s_ip=$(grep -E ";$slave[[:space:]]*$" $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}' | head -n 1)
+		sed -i -e "/[[:space:]]$slave[[:space:]]*/d" -e "/^$s_ip[[:space:]]/d" /etc/hosts
+		echo "$s_ip	$slave" >> /etc/hosts
+	done
+}
+
 tune_hd_service_trigger(){
 
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
@@ -521,6 +542,23 @@ tune_hd_service_trigger(){
 
 }
 
+tune_hadoop_slaves(){
+
+	echo "Tune Hadoop Slaves  : "
+	_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"		
+	
+	if [ "$(echo $_HD_SLAVE_LIST | wc -w)" = "0" ] ; then 
+		echo localhost > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
+	else
+
+		[ -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves" ] && mv $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves.bak
+		touch $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
+		for slave in $_HD_SLAVE_LIST; do
+			echo $slave >> $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves 
+		done
+	fi
+}
+
 config_hadoop_env(){
 
 	cat >> $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/libexec/hadoop-config.sh << EOF
@@ -531,20 +569,7 @@ EOF
 export JAVA_HOME=$_HOMEPATH_JAVA
 EOF
 
-	echo "generate slave file..."
-	
-	if [ "$(echo $_HD_SLAVE_LIST | wc -w)" = "0" ] ; then 
-		echo localhost > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
-	else
-		[ -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters" ] && mv $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters.bak
-		echo master > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/masters
-
-		[ -f "$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves" ] && mv $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves.bak
-		touch $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
-		for slave in $_HD_SLAVE_LIST; do
-			echo $slave >> $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves 
-		done
-	fi
+	tune_hadoop_slaves;
 
 	cat > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/core-site.xml << EOF
 <?xml version="1.0" encoding="UTF-8"?>
