@@ -519,9 +519,12 @@ tune_hosts(){
 	cp /etc/hosts /etc/hosts.clz-bd.bak
 	sed -i -e "s/^127.0.1.1/#127.0.1.1/g" /etc/hosts
 
+	# delete mstaer and slave-* in /etc/hosts
 	sed -i -e "/[[:space:]]$_HD_NAME_MASTER[[:space:]]*/d" /etc/hosts
+	sed -i -e "/[[:space:]]slave-[[:digit:]]\+[[:space:]]*$/d" /etc/hosts
+
 	awk -F ";" '$3 ~/'$_HD_NAME_MASTER'/  {print $2 "\t"$3}' $_HD_MAC_IP_NAME_CONF >> /etc/hosts
-	_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"
+	_HD_SLAVE_LIST="$( grep -vE '^[[:space:]]*\#' $_HD_MAC_IP_NAME_CONF | awk -F ";" ' $3 ~ /^slave/ {print $3}' )"		
 	for slave in $_HD_SLAVE_LIST ; do 
 		s_ip=$(grep -E ";$slave[[:space:]]*$" $_HD_MAC_IP_NAME_CONF | awk -F ";" '{print $2}' | head -n 1)
 		sed -i -e "/[[:space:]]$slave[[:space:]]*/d" -e "/^$s_ip[[:space:]]/d" /etc/hosts
@@ -533,11 +536,26 @@ tune_hd_service_trigger(){
 
 	if [ "$(cat /etc/hostname)" = "$_HD_NAME_MASTER" ] ; then
 		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser --format
-		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser dfs --start &
-		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser yarn --start &
+
+		# start NameNode on master
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/hadoop-daemon.sh start namenode" &
+
+		# start SecondaryNameNode on msater
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/hadoop-daemon.sh start secondarynamenode" &
+
+		# start JobHistoryServer on master
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/mr-jobhistory-daemon.sh start historyserver" &
+
+		# start ResourceManager on msater
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/yarn-daemon.sh start resourcemanager" &
+
 	elif [ -n "$(grep -E "^`hostname`$" /opt/hadoop/etc/hadoop/slaves)" ] ; then	
-		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser dfs --start &
-		${_PKG_INST_ROOT}/${_CLZ2BD_PNAME}/sbin/clz-bd.ser yarn --start &
+		# start DataNode on slave
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/hadoop-daemon.sh start datanode" &
+
+		# start NodeManager on slave
+		su - $_HD_USER -c "${_PKG_INST_ROOT}/${_PKG_INST_HADOOP_DIR}/sbin/yarn-daemon.sh start nodemanager" &
+
 	fi
 
 }
@@ -545,7 +563,7 @@ tune_hd_service_trigger(){
 tune_hadoop_slaves(){
 
 	echo "Tune Hadoop Slaves  : "
-	_HD_SLAVE_LIST="$(awk -F ";" ' $3 ~ /^slave/ {print $3}' $_HD_MAC_IP_NAME_CONF )"		
+	_HD_SLAVE_LIST="$( grep -vE '^[[:space:]]*\#' $_HD_MAC_IP_NAME_CONF | awk -F ";" ' $3 ~ /^slave/ {print $3}' )"		
 	
 	if [ "$(echo $_HD_SLAVE_LIST | wc -w)" = "0" ] ; then 
 		echo localhost > $_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR/etc/hadoop/slaves
