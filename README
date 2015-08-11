@@ -30,6 +30,9 @@ Reference:
 How to use :
 1) Normal :
 
+Step 0 :  Collect network mac-address of all nodes, the format likes as :
+https://github.com/ceasar-sun/clz-bd/blob/master/conf/mac-list.sample.txt
+
 Step 1: Prepare
 1.1. Prepare a supported native OS and download clz-bd project,
 https://github.com/ceasar-sun/clz-bd/releases/latest
@@ -40,7 +43,7 @@ Step 2: Deploy
 2.1. Use disk clone tool(ex: Cloenzilla, Ghost, TrueImage) to deploy the system image that be prepared in step 1 to expected machines.
 
 Step 3: Test Hadoop environment
-3.1. Until all clients reboot then run native OS, the necessary services would be started in master node automatically.
+3.1. Check: http://[master-ip]:8088 for YARN service and http://[master-ip]:50070 for DHFS service
 3.2. Login to master node and run Hadoop test code via 'hduser' account :
 $ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000
 
@@ -57,7 +60,7 @@ Step 2: Set postrun and deploy
 2.2. Make clients machine to run ocs restore procedure , then CDH environment would be deploy during ocs-postrun stage
 
 Step 3: Test Hadoop environment
-3.1. Until all clients reboot then run native OS, the necessary services would be started in master node automatically.
+3.1. Check: http://[master-ip]:8088 for YARN service and http://[master-ip]:50070 for DHFS service
 3.2. Login to master node and run Hadoop test code via 'hduser' account :
 $ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000
 
