@@ -32,7 +32,7 @@ How to use :
 
 Step 1: Prepare
 1.1. Prepare a supported native OS and download clz-bd project,
-$ git clone https://github.com/cesaar-sun/clz-bd.git
+https://github.com/ceasar-sun/clz-bd/releases/latest
 1.2. Execute setup with root privilege and follow the indication  
 $ sudo ./clz-bd/setup
 
