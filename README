@@ -10,19 +10,41 @@
 ####################################################
 
 Goal:
-* Deploy Hadoop environment automatically via Clonezilla postrun function. especially for massive deployment needs
-* User only have to prepare a native Linux OS Cloneizlla image. 
+* Deploy CDH Hadoop environment automatically especially for massive deployment usage.
+* Optional:
+	Clonezilla SE Deplloyment: By Clonezilla postrun, user just need to prepare a native Linux OS Cloneizlla image. 
 
 Require:
-* Clonezilla : SE or Live edition
 * Machines' mac adddress list (option): If SE assign IP by mac address, list can auto-generate form dhcpd.conf. If not, user have to prepare macs list of all machines
-* Saved Linux image (via Clonezilla)
+* Optional:
+	Clonezilla SE Deplloyment:
+	* Clonezilla : SE or Live edition. To save then deploy Linux image via Clonezilla
 
 Support:
 * Linux OS version: Debian, Ubuntut, LinuxMint , with LVM2
 * Hadoop version : CDH (Cloudera's Distribution Hadoop)
 
+Reference:
+* https://github.com/ceasar-sun/clz-bd
+
 How to use :
+1) Normal :
+
+Step 1: Prepare
+1.1. Prepare a supported native OS and download clz-bd project,
+$ git clone https://github.com/cesaar-sun/clz-bd.git
+1.2. Execute setup with root privilege and follow the indication  
+$ sudo ./clz-bd/setup
+
+Step 2: Deploy
+2.1. Use disk clone tool(ex: Cloenzilla, Ghost, TrueImage) to deploy the system image that be prepared in step 1 to expected machines.
+
+Step 3: Test Hadoop environment
+3.1. Until all clients reboot then run native OS, the necessary services would be started in master node automatically.
+3.2. Login to master node and run Hadoop test code via 'hduser' account :
+$ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000
+
+2) Optional : Clonezilla SE (Please skip this if you don't deploy image via Clonezilla postrun)
 
 Step 1: Prepare
 1.1. Make sure a saved image is ready and download Clonezilla-BD module:
@@ -35,8 +57,7 @@ Step 2: Set postrun and deploy
 2.2. Make clients machine to run ocs restore procedure , then CDH environment would be deploy during ocs-postrun stage
 
 Step 3: Test Hadoop environment
-3.1. Until all clients machine reboot then runnig native OS, the necessary services would be started in master node automatically.
-3.2. Usually, master node booting would take time to wait all slave nodes on line (stay in rc.local service) for starting relative services
-3.3. Login to master node and run Hadoop test code via 'hduser' account :
+3.1. Until all clients reboot then run native OS, the necessary services would be started in master node automatically.
+3.2. Login to master node and run Hadoop test code via 'hduser' account :
 $ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000
 
