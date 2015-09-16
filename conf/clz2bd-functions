@@ -335,7 +335,6 @@ install_pkg(){
 }
 config_system_env(){
 
-if [ 1 = 0] ; then 
 	local _this_mac
 	local _this_if
 	local _this_ip
@@ -393,9 +392,6 @@ EOF
 
 	[ -z "$_if_belong_cluster" ] && ($SETCOLOR_FAILURE; echo "This machine not belone to CLZ-BD cluster ! Exit .. ";$SETCOLOR_NORMAL;  exit 1)
 
-fi
-
-	
 	echo "set 'HADOOP_HOME=$_PKG_INST_ROOT/$_PKG_INST_HADOOP_DIR' into profile ..."
 	[ -e "/etc/profile" ] && cp /etc/profile /etc/profile.clz2bd.bak
 	sed -i -e '/\/etc\/clz2bd.profile/d' /etc/profile && echo  ". /etc/clz2bd.profile" >> /etc/profile	
