@@ -691,7 +691,7 @@ EOF
 }
 uninstall_clz-bd(){
 	# kill relative processs first
-	for pid in `ps  -u $_HD_USER | grep -E '^[[:digit:]]+' | awk '{print $1}'` ; do
+	for pid in `ps  -u $_HD_USER | grep -E '^[[:space:]]*[[:digit:]]+' | awk '{print $1}'` ; do
 		kill -9 $pid
 	done
 
@@ -702,13 +702,13 @@ uninstall_clz-bd(){
 	if [ -n "$(echo $_PKG_JAVA | grep 'openjdk' 2>/dev/null)" ] ; then 
 		if [ "$OS_Type" = 'DEB' ] ; then
 			apt-get purge -y $_PKG_JAVA
-			apt-get autoremove
+			apt-get -y autoremove
 		elif [ "$OS_Type" = 'RH' ]; then
 			yum remove -y $_PKG_JAVA
 		fi
 	fi
 
-	$SETCOLOR_WARNING; echo "Remove /etc/" ; $SETCOLOR_NORMAL;
+	$SETCOLOR_WARNING; echo "Remove /etc/clz2bd.profile" ; $SETCOLOR_NORMAL;
 	[ -e "/etc/clz2bd.profile" ] && mv /etc/clz2bd.profile /etc/clz2bd.profile.bak
 	
 	$SETCOLOR_WARNING ; echo "Remove nodes for /etc/hosts"; $SETCOLOR_NORMAL;

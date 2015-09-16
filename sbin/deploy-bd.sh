@@ -30,21 +30,19 @@ _CLZ2BD_WS_DIR=$(cd $(dirname $0) ;pwd)
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-b|--batch) shift ; _BATCH_MODE="y" ;;
-		-d|--debug) shift ; _DEBUG=y ;;
+		--debug) shift ; _DEBUG=y ;;
 		--deploy)	shift ; _ACTION="deploy" ;;
+		-d|--dist)	shift ; _PKG_RELEASE="${_PKG_RELEASE}.${1}" ; shift;;
 		-i|--node-install)	shift ; _ACTION="node-install" ;;
 		-u|--node-uninstall)	shift ; _ACTION="node-uninstall" ;;
+		--ocs-postrun)	shift ; _ACTION="ocs-postrun" ;;
 		--ocs-prepare)	shift ; _ACTION="ocs-prepare" ;;
-		--ocs-deploy)	shift ; _ACTION="ocs-deploy" ;;
-		--post-tune)	shift ; _ACTION="post-tune" ;;
 		-v|--verbose) shift ; _VERBOSE="-v" ;;
-		-V|--version) shift ; do_print_version=y  ;;
-
-		--help)	shift ; do_print_help=y ;;
+		--help)	shift ;  _ACTION="print-help" ;;
 
 		--)		shift ; break ;;
-		-*)		echo "${0}: ${1}: invalid option" ; do_print_help=y; 	shift ;;
-		*)	do_print_help=y ;shift ;;
+		-*)		echo "${0}: ${1}: invalid option" ;   _ACTION="print-help" ; shift ;;
+		*)	  _ACTION="print-help" ;shift ;;
 	esac
 done
 
@@ -98,10 +96,10 @@ elif [ "$_ACTION" = "ocs-postrun" ] ; then
 	rsync -avP $_CLZ2BD_ROOT_DIR ${_HD_DEPLOY_MOUNT_POINT}/opt
 
 	$SETCOLOR_WARNING; 
-	echo "Execute: chroot ${_HD_DEPLOY_MOUNT_POINT} /bin/bash -c \"/opt/$_CLZ2BD_PNAME/sbin/deploy-bd.sh --ocs-deploy\"";
+	echo "Execute: chroot ${_HD_DEPLOY_MOUNT_POINT} /bin/bash -c \"/opt/$_CLZ2BD_PNAME/sbin/deploy-bd.sh --deploy\"";
 	$SETCOLOR_NORMAL;
 
-	chroot ${_HD_DEPLOY_MOUNT_POINT} /bin/bash -c "/opt/$_CLZ2BD_PNAME/sbin/deploy-bd.sh --ocs-deploy"
+	chroot ${_HD_DEPLOY_MOUNT_POINT} /bin/bash -c "/opt/$_CLZ2BD_PNAME/sbin/deploy-bd.sh --deploy"
 	$SETCOLOR_WARNING; echo "Done and umount target OS ..." ; $SETCOLOR_NORMAL;
 
 	#chroot ${_HD_DEPLOY_MOUNT_POINT} /bin/bash -c "umount -a"
@@ -118,7 +116,7 @@ elif [ "$_ACTION" = "ocs-postrun" ] ; then
 	$SETCOLOR_SUCCESS; echo "Done . Gool luck !"; $SETCOLOR_NORMAL;
  
 elif [ "$_ACTION" = "deploy" ] ; then
-	echo "Run : OCS Deploy "
+	echo "Run : Deploy "
 	check_os_if_support; 
 	install_necessary_pkg
 	do_prepare_system_env;
@@ -166,6 +164,36 @@ elif [ "$_ACTION" = "node-uninstall" ] ; then
 	check_os_if_support
 	echo "Run : Node purge "
 	uninstall_clz-bd
+
+elif [ "$_ACTION" = "print-help" ] ; then
+	echo "_CLZ2BD_VERSION=$_CLZ2BD_VERSION"
+	echo "_PKG_RELEASE=$_PKG_RELEASE"
+	echo "
+Usage: $0 [actions] [options]
+Actions:
+  -i, --node-install	Install as template node for deployment. As default action.
+  --ocs-prepare		To prepare stuffs  for Clonezilla deployment in Clonezilla-SE server
+  --ocs-postrun		For Clonezilla SE postrun script
+  --deploy		Real deploy to node. Usually be call by 'node-install' or 'ocs-postrun' actions 
+  -u, --node-uninstall	Uninsatll Clz-BD
+
+Options:
+  -b, --batch		Batch mode
+  -d,--dist [dist]	Assign specified version,ex:  [testing|custom]
+  -h, --help		Print help page
+
+Sample:
+* As Run '--node-install' , to  install as template node for deployment
+   $0
+* Use 'testing' distro to run node-install
+   $0 -d testing
+* To prepare stuffs  for Clonezilla deployment in Clonezilla-SE server and use testing distro  
+   $0 --ocs-prepare -d testing
+ 
+Clz_BD is powered by Free Software Lab, NCHC
+Report bugs to <ceasar@clonezilla.org>
+";
+
 else
 	$SETCOLOR_WARNING ;echo "Usage: $0 [--ocs-prepare|--ocs-postrun|--deploy|--node-install|--node-uninstall]"; $SETCOLOR_NORMAL 
 fi

@@ -14,7 +14,7 @@ Goal:
 * Optional:
 	Clonezilla SE Deplloyment: By Clonezilla postrun, user just need to prepare a native Linux OS Cloneizlla image. 
 
-Require:
+Requirement:
 * Machines' mac adddress list (option): If SE assign IP by mac address, list can auto-generate form dhcpd.conf. If not, user have to prepare macs list of all machines
 * Optional:
 	Clonezilla SE Deplloyment:
@@ -63,4 +63,8 @@ Step 3: Test Hadoop environment
 3.1. Check: http://[master-ip]:8088 for YARN service and http://[master-ip]:50070 for DHFS service
 3.2. Login to master node and run Hadoop test code via 'hduser' account :
 $ hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.5.0-cdh5.3.1.jar pi 4 100000
+
+
+Note:
+* CDH Download: http://archive-primary.cloudera.com/cdh5/cdh/5/
 
