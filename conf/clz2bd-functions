@@ -692,6 +692,7 @@ EOF
 uninstall_clz-bd(){
 	# kill relative processs first
 	for pid in `ps  -u $_HD_USER | grep -E '^[[:space:]]*[[:digit:]]+' | awk '{print $1}'` ; do
+		echo "Kill PID=$pid";
 		kill -9 $pid
 	done
 
@@ -709,6 +710,7 @@ uninstall_clz-bd(){
 	fi
 
 	$SETCOLOR_WARNING; echo "Remove /etc/clz2bd.profile" ; $SETCOLOR_NORMAL;
+	sed -i -e  "/^. /etc/clz2bd.profile/d" /etc/clz2bd.profile
 	[ -e "/etc/clz2bd.profile" ] && mv /etc/clz2bd.profile /etc/clz2bd.profile.bak
 	
 	$SETCOLOR_WARNING ; echo "Remove nodes for /etc/hosts"; $SETCOLOR_NORMAL;
