@@ -710,7 +710,7 @@ uninstall_clz-bd(){
 	fi
 
 	$SETCOLOR_WARNING; echo "Remove /etc/clz2bd.profile" ; $SETCOLOR_NORMAL;
-	sed -i -e  "/^. /etc/clz2bd.profile/d" /etc/profile
+	sed -i -e  "/^. \/etc\/clz2bd.profile/d" /etc/profile
 	[ -e "/etc/clz2bd.profile" ] && mv /etc/clz2bd.profile /etc/clz2bd.profile.bak
 	
 	$SETCOLOR_WARNING ; echo "Remove nodes for /etc/hosts"; $SETCOLOR_NORMAL;
