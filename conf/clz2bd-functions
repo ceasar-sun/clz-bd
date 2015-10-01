@@ -119,8 +119,8 @@ do_prepare_network(){
 	echo "Get network information ..." 
 	[ "$(ls $_CLZ2BD_PKG_DIR 2>/dev/null | wc -l )" = "0" -a -z "$(ip route)" ] && ( $SETCOLOR_FAILURE; echo "The follows need network connect, so we start it... " ; $SETCOLOR_NORMAL; ocs-live-netcfg )
 
-	_HD_NW_GEATWAY="$(ip route | awk "/^default via/ {print \$3}")"
-	_gateway_dev="$(ip route | awk "/^default via/ {print \$5}")"
+	_HD_NW_GEATWAY="$(ip route | awk "/^default via/ {print \$3}" | head -n 1)"
+	_gateway_dev="$(ip route | awk "/^default via/ {print \$5}"| head -n 1)"
 	_HD_NW_NETWORK="$(route -n | grep $_gateway_dev | grep -v $_HD_NW_GEATWAY | awk -F " " '{print $1}')"
 	_HD_NW_NETMASK="$(route -n | grep $_gateway_dev | grep -v $_HD_NW_GEATWAY | awk -F " " '{print $3}')"
 	[ -f "/etc/resolv.conf" ] && _HD_NW_DNS="$(awk '/^nameserver/{printf "%s ",$2}' /etc/resolv.conf)"
