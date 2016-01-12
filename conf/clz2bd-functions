@@ -121,8 +121,8 @@ do_prepare_network(){
 
 	_HD_NW_GEATWAY="$(ip route | awk "/^default via/ {print \$3}" | head -n 1)"
 	_gateway_dev="$(ip route | awk "/^default via/ {print \$5}"| head -n 1)"
-	_HD_NW_NETWORK="$(route -n | grep $_gateway_dev | grep -v $_HD_NW_GEATWAY | awk -F " " '{print $1}')"
-	_HD_NW_NETMASK="$(route -n | grep $_gateway_dev | grep -v $_HD_NW_GEATWAY | awk -F " " '{print $3}')"
+	_HD_NW_NETWORK="$(route -n | grep $_gateway_dev | awk -F " " '{ if $2 != "$_HD_NW_GEATWAY" && $1 !~/^169\.254\./ {print $1} }'| head -n 1)"
+	_HD_NW_NETMASK="$(route -n | grep $_gateway_dev | awk -F " " '{ if $2 != "$_HD_NW_GEATWAY" && $1 !~/^169\.254\./ {print $3} }'| head -n 1)"
 	[ -f "/etc/resolv.conf" ] && _HD_NW_DNS="$(awk '/^nameserver/{printf "%s ",$2}' /etc/resolv.conf)"
 	[ -z "$_HD_NW_DNS" ] && $_HD_NW_DNS=$_HD_NW_DNS_DEF
 
